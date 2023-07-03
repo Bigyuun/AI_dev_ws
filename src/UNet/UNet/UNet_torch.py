@@ -15,7 +15,11 @@ from torchvision import transforms, datasets
 # setup parameters
 lr = 1e-3
 batch_size = 4
+<<<<<<< HEAD
 num_epoch = 50
+=======
+num_epoch = 20
+>>>>>>> 1f3bf4e9e667f883ea0e6a15891fbd2082543c0b
 
 data_dir = '../docs/isbi-2012-master/data'
 ckpt_dir = '../checkpoint'
