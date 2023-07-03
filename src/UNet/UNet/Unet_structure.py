@@ -67,7 +67,7 @@ class UNet(nn.Module):
 
 
         # segmentation에 필요한 n 개의 클래스에 대한 output
-        self.fc = nn.Conv2d(in_channels=64, out_channels=2, kernel_size=1, stride=1, padding=0, bias=True)
+        self.fc = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True)
 
     # 각 layer 연결
     def forward(self, x):   # x is input image
