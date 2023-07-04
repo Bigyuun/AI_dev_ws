@@ -1,4 +1,3 @@
-
 import os
 
 import matplotlib.pyplot as plt
@@ -17,27 +16,22 @@ lr = 1e-3
 batch_size = 4
 num_epoch = 100
 
-
 data_dir = '../docs/isbi-2012-master/data'
 ckpt_dir = '../checkpoint'
 log_dir = '../log'      # tensorboard log file
-result_dir = '../results'
-
-if not os.path.exists(result_dir):
-    os.makedirs(result_dir)
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# print(device)
+
 
 class UNet(nn.Module):
     """
     Construction of Network
     """
+
     def __init__(self):
         super(UNet, self).__init__()
 
         # Convolution & Batch Nomalization & ReLu (CBR)
-        def CBR2d(in_channels, out_channels, kernel_size=3,  stride=1, padding=1, bias=True):
+        def CBR2d(in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=True):
             layers = []
             layers += [nn.Conv2d(in_channels=in_channels,
                                  out_channels=out_channels,
@@ -75,30 +69,29 @@ class UNet(nn.Module):
         self.unpool4 = nn.ConvTranspose2d(in_channels=512, out_channels=512,
                                           kernel_size=2, stride=2, padding=0, bias=True)
 
-        self.dec4_2 = CBR2d(in_channels=2*512, out_channels=512)      # skip-connection
+        self.dec4_2 = CBR2d(in_channels=2 * 512, out_channels=512)  # skip-connection
         self.dec4_1 = CBR2d(in_channels=512, out_channels=256)
         self.unpool3 = nn.ConvTranspose2d(in_channels=256, out_channels=256,
                                           kernel_size=2, stride=2, padding=0, bias=True)
 
-        self.dec3_2 = CBR2d(in_channels=2*256, out_channels=256)      # skip-connection
+        self.dec3_2 = CBR2d(in_channels=2 * 256, out_channels=256)  # skip-connection
         self.dec3_1 = CBR2d(in_channels=256, out_channels=128)
         self.unpool2 = nn.ConvTranspose2d(in_channels=128, out_channels=128,
                                           kernel_size=2, stride=2, padding=0, bias=True)
 
-        self.dec2_2 = CBR2d(in_channels=2*128, out_channels=128)      # skip-connection
+        self.dec2_2 = CBR2d(in_channels=2 * 128, out_channels=128)  # skip-connection
         self.dec2_1 = CBR2d(in_channels=128, out_channels=64)
         self.unpool1 = nn.ConvTranspose2d(in_channels=64, out_channels=64,
                                           kernel_size=2, stride=2, padding=0, bias=True)
 
-        self.dec1_2 = CBR2d(in_channels=2*64, out_channels=64)
+        self.dec1_2 = CBR2d(in_channels=2 * 64, out_channels=64)
         self.dec1_1 = CBR2d(in_channels=64, out_channels=64)
-
 
         # segmentation에 필요한 n 개의 클래스에 대한 output
         self.fc = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=1, stride=1, padding=0, bias=True)
 
     # 각 layer 연결
-    def forward(self, x):   # x is input image
+    def forward(self, x):  # x is input image
 
         # encoding
         enc1_1 = self.enc1_1(x)
@@ -124,7 +117,7 @@ class UNet(nn.Module):
 
         unpool4 = self.unpool4(dec5_1)
         # Generally, 채널방향으로 연결하는 함수를 concatenation(cat)
-        cat4 = torch.cat((unpool4, enc4_2), dim=1)      # dim=[0:batch, 1:channel, 2:height, 3:width]
+        cat4 = torch.cat((unpool4, enc4_2), dim=1)  # dim=[0:batch, 1:channel, 2:height, 3:width]
         dec4_2 = self.dec4_2(cat4)
         dec4_1 = self.dec4_1(dec4_2)
 
@@ -152,6 +145,7 @@ class Dataset(torch.utils.data.Dataset):
     """
     Data Loader
     """
+
     def __init__(self, data_dir, transform=None):
         self.data_dir = data_dir
         self.transform = transform
@@ -174,8 +168,8 @@ class Dataset(torch.utils.data.Dataset):
         label = np.load(os.path.join(self.data_dir, self.list_label[index]))
         input = np.load(os.path.join(self.data_dir, self.list_input[index]))
 
-        label = label/255.0
-        input = input/255.0
+        label = label / 255.0
+        input = input / 255.0
 
         # 2차원 데이터(e.g. 흑백)인 경우 새로운 채널(axis) 생성
         if label.ndim == 2:
@@ -183,7 +177,7 @@ class Dataset(torch.utils.data.Dataset):
         if input.ndim == 2:
             input = input[:, :, np.newaxis]
 
-        data = {'input': input, 'label': label}     # dictionary 형태로 export
+        data = {'input': input, 'label': label}  # dictionary 형태로 export
 
         # transform이 정의되어 있다면 transform을 거친 데이터를 불러옴
         if self.transform:
@@ -198,6 +192,7 @@ class ToTensor(object):
     - Data Loader에 넣어 사용 (쉽게 수정 가능)
     - Data type conversion : Numpy -> Tensor
     """
+
     def __call__(self, data):
         label, input = data['label'], data['input']
 
@@ -210,11 +205,13 @@ class ToTensor(object):
 
         return data
 
-class Normalization(object):
+
+class Nomalization(object):
     '''
     Z-Score Normalization
     (x-mean) / (standard deviation)
     '''
+
     def __init__(self, mean=0.5, std=0.5):
         self.mean = mean
         self.std = std
@@ -228,10 +225,12 @@ class Normalization(object):
 
         return data
 
+
 class RandomFlip(object):
     """
     Up-down, Left-Right conversion (random)
     """
+
     def __call__(self, data):
         label, input = data['label'], data['input']
 
@@ -246,7 +245,6 @@ class RandomFlip(object):
         data = {'label': label, 'input': input}
 
         return data
-
 
 
 ###############
@@ -297,6 +295,7 @@ def save(ckpt_dir, net, optim, epoch):
     torch.save({'net': net.state_dict(), 'optim': optim.state_dict()},
                "%s/model_epoch%d.pth" % (ckpt_dir, epoch))
 
+
 ###############
 ## 네트워크 불러오기
 ###############
@@ -320,7 +319,7 @@ def load(ckpt_dir, net, optim):
 ###############
 # 네트워크 학습하기
 ###############
-transform = transforms.Compose([Normalization(mean=0.5, std=0.5), RandomFlip(), ToTensor()])
+transform = transforms.Compose([Nomalization(mean=0.5, std=0.5), RandomFlip(), ToTensor()])
 
 dataset_train = Dataset(data_dir=os.path.join(data_dir, 'train'), transform=transform)
 loader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=8)
@@ -329,7 +328,7 @@ dataset_val = Dataset(data_dir=os.path.join(data_dir, 'val'), transform=transfor
 loader_val = DataLoader(dataset_val, batch_size=batch_size, shuffle=False, num_workers=8)
 
 # 네트워크 생성
-net = UNet().to(device)     # domain is GPU
+net = UNet().to(device)  # domain is GPU
 
 # Loss-Function 정의
 fn_loss = nn.BCEWithLogitsLoss().to(device)
@@ -345,159 +344,91 @@ num_batch_train = np.ceil(num_data_train / batch_size)
 num_batch_val = np.ceil(num_data_val / batch_size)
 
 # 그 외 부수적인 functions 설정
-fn_tonumpy = lambda x: x.to('cpu').detach().numpy().transpose(0,2,3,1)  # tensor to numpy
+fn_tonumpy = lambda x: x.to('cpu').detach().numpy().transpose(0, 2, 3, 1)  # tensor to numpy
 fn_denorm = lambda x, mean, std: (x * std) + mean
-fn_class = lambda x: 1.0 * (x > 0.5)    # output image를 binary class로 분류
+fn_class = lambda x: 1.0 * (x > 0.5)  # output image를 binary class로 분류
 
 # Tensorboard를 사용하기 위한 SummaryWriter 설정
 writer_train = SummaryWriter(log_dir=os.path.join(log_dir, 'train'))
 writer_val = SummaryWriter(log_dir=os.path.join(log_dir, 'val'))
 
 # 네트워크 학습시키기
-st_epoch = 0    # start position 0
-# 학습된 모델이 있을 경우 모델 로드하기
+st_epoch = 0  # start position 0
 net, optim, st_epoch = load(ckpt_dir=ckpt_dir, net=net, optim=optim)
 
-def UNetTrain():
-    for epoch in range(st_epoch + 1, num_epoch + 1):
-        net.train()
+
+# def UNetTrain():
+for epoch in range(st_epoch + 1, num_epoch + 1):    # 이전 학습 이어서 진행
+    net.train()
+    loss_arr = []
+
+    for batch, data in enumerate(loader_train, 1):
+        # forward pass
+        label = data['label'].to(device)
+        input = data['input'].to(device)
+        output = net(input)
+
+        # backward pass
+        optim.zero_grad()
+        loss = fn_loss(output, label)
+        loss.backward()
+        optim.step()
+
+        # 손실함수 계산
+        loss_arr += [loss.item()]
+        print("TRAIN: EPOCH %04d / %04d | BATCH %04d / %04d | LOSS %.4f" %
+              (epoch, num_epoch, batch, num_batch_train, np.mean(loss_arr)))
+
+        # Tensorboard 저장하기
+        label = fn_tonumpy(label)
+        input = fn_tonumpy(fn_denorm(input, mean=0.5, std=0.5))
+        output = fn_tonumpy(fn_class(output))
+
+        writer_train.add_image('label', label, num_batch_train * (epoch - 1) + batch, dataformats='NHWC')
+        writer_train.add_image('input', input, num_batch_train * (epoch - 1) + batch, dataformats='NHWC')
+        writer_train.add_image('output', output, num_batch_train * (epoch - 1) + batch, dataformats='NHWC')
+
+    writer_train.addscalar('loss', np.mean(loss_arr), epoch)
+
+    with torch.no_grad():  # backward pass 제외
+        net.eval()
         loss_arr = []
 
-        for batch, data in enumerate(loader_train, 1):
+        for batch, data in enumerate(loader_val, 1):
             # forward pass
             label = data['label'].to(device)
             input = data['input'].to(device)
             output = net(input)
 
-            # backward pass
-            optim.zero_grad()
-            loss = fn_loss(output, label)
-            loss.backward()
-            optim.step()
-
             # 손실함수 계산
+            loss = fn_loss(output, label)
             loss_arr += [loss.item()]
-            print("TRAIN: EPOCH %04d / %04d | BATCH %04d / %04d | LOSS %.4f" %
-                  (epoch, num_epoch, batch, num_batch_train, np.mean(loss_arr)))
+            print("VALID: EPOCH %04d / %04d | BATCH %04d / %04d | LOSS %.4f" %
+                  (epoch, num_epoch, batch, num_batch_val, np.mean(loss_arr)))
 
-            # Tensorboard 저장하기
+            # Tensorboard 저장
             label = fn_tonumpy(label)
             input = fn_tonumpy(fn_denorm(input, mean=0.5, std=0.5))
             output = fn_tonumpy(fn_class(output))
 
-            writer_train.add_image('label', label, num_batch_train * (epoch-1) + batch, dataformats='NHWC')
-            writer_train.add_image('input', input, num_batch_train * (epoch-1) + batch, dataformats='NHWC')
-            writer_train.add_image('output', output, num_batch_train * (epoch-1) + batch, dataformats='NHWC')
+            writer_val.add_image('label', label, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
+            writer_val.add_image('input', input, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
+            writer_val.add_image('output', output, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
 
-        writer_train.add_scalar('loss', np.mean(loss_arr), epoch)
+    writer_val.add_scalar('loss', np.mean(loss_arr), epoch)
 
-        with torch.no_grad():   # backward pass 제외
-            net.eval()
-            loss_arr = []
+    # epoch 50 마다 모델 저장
+    if epoch % 50 == 0:
+        save(ckpt_dir=ckpt_dir, net=net, optim=optim, epoch=epoch)
 
-            for batch, data in enumerate(loader_val, 1):
-                # forward pass
-                label = data['label'].to(device)
-                input = data['input'].to(device)
-                output = net(input)
-
-                # 손실함수 계산
-                loss = fn_loss(output, label)
-                loss_arr += [loss.item()]
-                print("VALID: EPOCH %04d / %04d | BATCH %04d / %04d | LOSS %.4f" %
-                      (epoch, num_epoch, batch, num_batch_val, np.mean(loss_arr)))
-
-                # Tensorboard 저장
-                label = fn_tonumpy(label)
-                input = fn_tonumpy(fn_denorm(input, mean=0.5, std=0.5))
-                output = fn_tonumpy(fn_class(output))
-
-                writer_val.add_image('label', label, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
-                writer_val.add_image('input', input, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
-                writer_val.add_image('output', output, num_batch_val * (epoch - 1) + batch, dataformats='NHWC')
+writer_train.close()
+writer_val.close()
 
 
-        writer_val.add_scalar('loss', np.mean(loss_arr), epoch)
-
-        # epoch 50 마다 모델 저장
-        if epoch % 50 == 0:
-            save(ckpt_dir=ckpt_dir, net=net, optim=optim, epoch=epoch)
-
-    writer_train.close()
-    writer_val.close()
-
-#
-# def UNetTest():
-#     transform = transforms.Compose([Normalization(mean=0.5, std=0.5), ToTensor()])
-#
-#     dataset_test = Dataset(data_dir=os.path.join(data_dir, 'test'), transform=transform)
-#     loader_test = DataLoader(dataset_test, batch_size=batch_size, shuffle=False, num_workers=8)
-#
-#     # 그 외 부수적인 variables 설정하기
-#     num_data_test = len(dataset_test)
-#     num_batch_test = np.ceil(num_data_test / batch_size)
-#
-#     # 결과 디렉토리 생성하기
-#     result_dir = os.path.join(base_dir, 'result')
-#     if not os.path.exists(result_dir):
-#         os.makedirs(os.path.join(result_dir, 'png'))
-#         os.makedirs(os.path.join(result_dir, 'numpy'))
-#
-#     net, optim, st_epoch = load(ckpt_dir=ckpt_dir, net=net, optim=optim)
-#
-#     with torch.no_grad():
-#         net.eval()
-#         loss_arr = []
-#
-#         for batch, data in enumerate(loader_test, 1):
-#             # forward pass
-#             label = data['label'].to(device)
-#             input = data['input'].to(device)
-#
-#             output = net(input)
-#
-#             # 손실함수 계산하기
-#             loss = fn_loss(output, label)
-#
-#             loss_arr += [loss.item()]
-#
-#             print("TEST: BATCH %04d / %04d | LOSS %.4f" %
-#                   (batch, num_batch_test, np.mean(loss_arr)))
-#
-#             # Tensorboard 저장하기
-#             label = fn_tonumpy(label)
-#             input = fn_tonumpy(fn_denorm(input, mean=0.5, std=0.5))
-#             output = fn_tonumpy(fn_class(output))
-#
-#             # 테스트 결과 저장하기
-#             for j in range(label.shape[0]):
-#                 id = num_batch_test * (batch - 1) + j
-#
-#                 # png type
-#                 plt.imsave(os.path.join(result_dir, 'png', 'label_%04d.png' % id), label[j].squeeze(), cmap='gray')
-#                 plt.imsave(os.path.join(result_dir, 'png', 'input_%04d.png' % id), input[j].squeeze(), cmap='gray')
-#                 plt.imsave(os.path.join(result_dir, 'png', 'output_%04d.png' % id), output[j].squeeze(), cmap='gray')
-#
-#                 # numpy type
-#                 np.save(os.path.join(result_dir, 'numpy', 'label_%04d.npy' % id), label[j].squeeze())
-#                 np.save(os.path.join(result_dir, 'numpy', 'input_%04d.npy' % id), input[j].squeeze())
-#                 np.save(os.path.join(result_dir, 'numpy', 'output_%04d.npy' % id), output[j].squeeze())
-#
-#     print("AVERAGE TEST: BATCH %04d / %04d | LOSS %.4f" %
-#           (batch, num_batch_test, np.mean(loss_arr)))
-#
-#
+# if __name__ == '__main__':
+#     UNetTrain()
 
 
-
-
-
-
-
-
-if __name__ == '__main__':
-    UNetTrain()
-    # UNetTest()
 
 
 
