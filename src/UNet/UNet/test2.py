@@ -77,7 +77,7 @@ def create_data_generator(data_dir, batch_size, target_size):
 
     # 이미지 데이터와 라벨 데이터를 zip으로 묶어서 반환
     data_generator = zip(image_generator, label_generator)
-
+    # return
     return data_generator
 
 
