@@ -6,6 +6,6 @@ model = custom_unet(
     num_classes=3,
     filters=64,
     dropout=0.2,
-    output_activation='sigmoid')
+    output_activation='softmax')
 
 history = model.fit_generator()
