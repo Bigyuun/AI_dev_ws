@@ -1,37 +1,156 @@
 import os
-from os import path
-import shutil
+import sys
+import random
+import warnings
+import glob
+
 import numpy as np
-from PIL import Image
+import pandas as pd
+
 import matplotlib.pyplot as plt
+from PIL import Image
+from tqdm import tqdm
+# from itertools import chain
+# from skimage.io import imread, imshow, imread_collection, concatenate_images
+# from skimage.transform import resize
+# from skimage.morphology import label
 
-base_dir = "../docs/Segmentation_Rigid_Training"
-dir_train = './dataset/train'
-dir_test = './dataset/test'
+import tensorflow as tf
+tf.config.run_functions_eagerly(True)
+from keras.models import Model, load_model
+from keras.layers import Input
+from keras.layers.core import Dropout, Lambda
+from keras.layers.convolutional import Conv2D, Conv2DTranspose
+from keras.layers.pooling import MaxPooling2D
+from keras.preprocessing.image import ImageDataGenerator
 
-if not os.path.exists(dir_train):
-    os.makedirs(dir_test)
+# from keras.layers.merge import concatenate
+# from keras.callbacks import EarlyStopping, ModelCheckpoint
+# from keras import backend as K
 
-if not os.path.exists(dir_test):
-    os.makedirs(dir_test)
+import UNet_keras
 
-# dir_raw = os.path.join(base_dir, 'Training/OP1/Raw')
-dir_raw = '../docs/Segmentation_Rigid_Training/Training/OP4/Raw'
-dir_raw_list = os.listdir(dir_raw)
+def preprocess_image(image, width, height):
+    # resize image
+    image = tf.image.resize(image, (width, height))
 
-dir_mask = '../docs/Segmentation_Rigid_Training/Training/OP4/Masks'
-dir_mask_list = os.listdir(dir_mask)
+    # Nomalization
+    image = image/255.0
 
-# for file in dir_raw:
-#     if not path.exists(dir_train + '\\' + file):
-#         shutil.copyfile(dir_raw + '\\' + file, dir_train + '\\' + file)
+    return image
 
-# shutil.copytree(dir_raw, dir_train, dirs_exist_ok=True)
-for idx, file in enumerate(dir_raw_list):
-    if 'raw' in file:
-        shutil.copy(dir_raw + '\\' + file, dir_test + '\\raw' + '\\'  + 'img_op4_'+str(idx+1)+'.png')
+# 학습 데이터와 라벨을 묶어주는 제너레이터 생성
+def train_data_generator():
+    while True:
+        image_batch = train_image_generator.next()
+        label_batch = train_label_generator.next()
+        yield image_batch, label_batch
+
+def val_data_generator():
+    while True:
+        image_batch = val_image_generator.next()
+        label_batch = val_label_generator.next()
+        yield image_batch, label_batch
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+# Preparing Data
+train_data_dir = './dataset/train/raw'
+label_data_dir = './dataset/train/masks'
+
+path_test_raw = './dataset/test/raw'
+path_test_mask = './dataset/test/masks'
+
+train_data_list = glob.glob(f"{train_data_dir}/*.png")
+
+n_img = len(train_data_list)
+img_input = Image.open(train_data_list[0])
+img_width, img_height = img_input.size  # 640 x 480
+
+batch_size = 4
+n_epoch = 10
+
+# ImageDataGenerator 생성 및 설정
+data_generator = ImageDataGenerator(preprocessing_function=preprocess_image,  # 사용자 정의 전처리 함수
+                                    validation_split=0.2,  # 학습 데이터의 일부를 검증 데이터로 분할
+                                    rotation_range=20,  # 랜덤하게 이미지를 회전시키는 범위 (도)
+                                    width_shift_range=0.2,  # 랜덤하게 이미지를 수평 이동시키는 범위
+                                    height_shift_range=0.2,  # 랜덤하게 이미지를 수직 이동시키는 범위
+                                    zoom_range=0.2,  # 랜덤하게 이미지를 확대/축소하는 범위
+                                    horizontal_flip=True,  # 랜덤하게 이미지를 수평으로 뒤집기
+                                    vertical_flip=True,  # 랜덤하게 이미지를 수직으로 뒤집기
+                                    )
+# 학습 데이터 제너레이터
+train_image_generator = data_generator.flow_from_directory(
+                                    train_data_dir,
+                                    target_size=(img_width, img_height),
+                                    batch_size=batch_size,
+                                    class_mode='input',  # None으로 설정하여 라벨 없이 이미지만 로드
+                                    color_mode='rgb',  # RGB 이미지 사용
+                                    subset='training',  # 학습 데이터
+                                    )
+
+# 라벨링된 데이터 제너레이터
+train_label_generator = data_generator.flow_from_directory(
+                                    label_data_dir,
+                                    target_size=(img_width, img_height),
+                                    batch_size=batch_size,
+                                    class_mode='categorical',  # None으로 설정하여 라벨 없이 이미지만 로드
+                                    color_mode='grayscale',  # 라벨은 흑백 이미지로 로드
+                                    subset='training',  # 학습 데이터
+                                    )
 
 
-for idx, file in enumerate(dir_mask_list):
-    if 'class' in file:
-        shutil.copy(dir_mask + '\\' + file, dir_test + '\\masks' + '\\'  + 'img_op4_'+str(int(idx/2+1))+'_class.png')
+val_image_generator = data_generator.flow_from_directory(
+                                    train_data_dir,
+                                    target_size=(img_width, img_height),
+                                    batch_size=batch_size,
+                                    class_mode='input',
+                                    subset='validation',  # 검증 데이터
+                                    color_mode='rgb',  # RGB 이미지 사용
+                                    )
+
+val_label_generator = data_generator.flow_from_directory(
+                                    label_data_dir,
+                                    target_size=(img_width, img_height),
+                                    batch_size=batch_size,
+                                    class_mode='categorical',
+                                    color_mode='grayscale',
+                                    subset='validation',  # 검증 데이터
+                                    )
+
+model = UNet_keras.unet(n_classes=3, input_size=(img_width, img_height, 3))
+
+model.fit(train_data_generator(),
+          epochs=n_epoch,
+          steps_per_epoch=len(train_image_generator),
+          validation_data=val_data_generator,
+          validation_steps=len(val_image_generator)
+          )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

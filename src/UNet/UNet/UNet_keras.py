@@ -9,8 +9,11 @@ from keras.optimizers import *
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from keras import backend as keras
 
+import tensorflow as tf
+tf.config.run_functions_eagerly(True)
 
-def unet(n_classes=3, pretrained_weights=None, input_size=(256, 256, 3)):
+
+def unet(n_classes=3, pretrained_weights=None, input_size=(640, 480, 3)):
     inputs = Input(input_size)
     conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(inputs)
     conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
@@ -54,11 +57,11 @@ def unet(n_classes=3, pretrained_weights=None, input_size=(256, 256, 3)):
     conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge9)
     conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
     conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
-    conv10 = Conv2D(n_classes, 1, activation='sigmoid')(conv9)
+    conv10 = Conv2D(n_classes, 1, activation='softmax')(conv9)
 
     model = Model(inputs=inputs, outputs=conv10)
 
-    model.compile(optimizer=Adam(lr=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(lr=1e-4), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     model.summary()
 
