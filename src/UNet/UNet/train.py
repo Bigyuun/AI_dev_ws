@@ -1,6 +1,5 @@
 
 import os
-# import Unet_structure
 from data_loader import Dataset
 
 import torch

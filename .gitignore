@@ -1,6 +1,4 @@
 src/UNet/log/
-<<<<<<< HEAD
 src/UNet/checkpoint/
-=======
 src/UNet/docs/
->>>>>>> 1f3bf4e9e667f883ea0e6a15891fbd2082543c0b
+src/UNet/UNet/instance-level-human-parsing
