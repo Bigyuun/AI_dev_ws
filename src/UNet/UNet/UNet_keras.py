@@ -61,7 +61,7 @@ def unet(n_classes=20, pretrained_weights=None, input_size=(640, 480, 3)):
 
     model = Model(inputs=inputs, outputs=conv10)
 
-    model.compile(optimizer=Adam(learning_rate=1e-4), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer='Adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     model.summary()
 
