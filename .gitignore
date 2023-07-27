@@ -2,6 +2,5 @@ src/UNet/log/
 src/UNet/docs/
 src/UNet/UNet_torch_isbi-2012-master/isbi-2012-master/
 src/UNet/UNet_torch_isbi-2012-master/checkpoint
-src/UNet/UNet/instance-level-human-parsing
 src/UNet/UNet/files/
-
+src/UNet/UNet_Augmentation/files
