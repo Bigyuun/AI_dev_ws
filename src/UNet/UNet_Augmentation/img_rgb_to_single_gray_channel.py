@@ -14,9 +14,8 @@ import cv2
 from glob import glob
 from tqdm import tqdm
 
-GLOBAL_GRAYMASK_DIR = './dataset/test/graymasks'
-GLOBAL_TOTALMASK_DIR = './dataset/test'
-GLOBAL_GRAYMASK_NORMALIZE_DIR = './dataset/test/graymasks_normalized'
+GLOBAL_GRAYMASK_DIR = './dataset/train/masks_augmented_filter0'
+GLOBAL_GRAYMASK_NORMALIZE_DIR = './dataset/train/graymasks_normalized_augmented'
 """ Creating a directory """
 def create_dir(path):
     if not os.path.exists(path):
@@ -29,7 +28,7 @@ def process_mask(rgb_mask, colormap, file_name):
     # np.all : 행 비교 (혹은 행렬 자체 비교)
     for i, color in enumerate(colormap):
         cmap = np.all(np.equal(rgb_mask, color), axis=-1)
-        cv2.imwrite(f"{GLOBAL_GRAYMASK_DIR}/{file_name}_{i}.png", cmap*255)
+        # cv2.imwrite(f"{GLOBAL_GRAYMASK_DIR}/{file_name}_{i}.png", cmap*255)
         output_mask.append(cmap)
 
     output_mask = np.stack(output_mask, axis=-1)
@@ -40,12 +39,11 @@ if __name__ == "__main__":
 
     """ Create Directory """
     create_dir(GLOBAL_GRAYMASK_DIR)
-    create_dir(GLOBAL_TOTALMASK_DIR)
     create_dir(GLOBAL_GRAYMASK_NORMALIZE_DIR)
 
     dataset_path = './dataset'
-    images = sorted(glob(os.path.join(dataset_path, 'test/raw', '*.png')))
-    masks = sorted(glob(os.path.join(dataset_path, 'test/masks', '*.png')))
+    images = sorted(glob(os.path.join(dataset_path, 'train/raw_augmented', '*.png')))
+    masks = sorted(glob(os.path.join(dataset_path, 'train/masks_augmented_filter0', '*.png')))
 
     print(f"Image(raw) : {len(images)}")
     print(f"Mask(masks) : {len(masks)}")
@@ -70,6 +68,7 @@ if __name__ == "__main__":
     for x, y in tqdm(zip(images, masks), total=len(images)):
         """ extract the file name """
         file_name = x.split('/')[-1].split('.')[0]
+        file_name_masks = y.split('/')[-1].split('.')[0]
         # print(name)
 
         image_raw = cv2.imread(x, cv2.IMREAD_COLOR)
@@ -87,14 +86,17 @@ if __name__ == "__main__":
         processed_mask = process_mask(mask_raw, ENDOVIS_COLORMAP, file_name)   # one-hot encoding (True or False), 3-D channel
         grayscale_mask = np.argmax(processed_mask, axis=-1)     # 1-D channel, 2차원 numpy
         grayscale_mask = np.expand_dims(grayscale_mask, axis=-1)   # 3차원 numpy
-        cv2.imwrite(f"{GLOBAL_GRAYMASK_NORMALIZE_DIR}/{file_name}.png", grayscale_mask)
+        cv2.imwrite(f"{GLOBAL_GRAYMASK_NORMALIZE_DIR}/{file_name_masks}.png", grayscale_mask)
+
+        ''' 원본 / 라벨 / 예측 이미지 저장'''
+        # GLOBAL_TOTALMASK_DIR = './dataset/train'
+        # create_dir(GLOBAL_TOTALMASK_DIR)
 
         # line = np.ones((image_raw.shape[1], image_raw.shape[0], 3))*255 # 경계선 넣고싶으면 씀
-        cat_images = np.concatenate([
-            image_raw, mask_raw, np.concatenate([grayscale_mask, grayscale_mask, grayscale_mask], axis=-1) # 3차원이라 gray는 3개 써준거
-        ], axis=1)
-        cv2.imwrite(f"{GLOBAL_TOTALMASK_DIR}/{file_name}.png", cat_images)
-
+        # cat_images = np.concatenate([
+        #     image_raw, mask_raw, np.concatenate([grayscale_mask, grayscale_mask, grayscale_mask], axis=-1) # 3차원이라 gray는 3개 써준거
+        # ], axis=1)
+        # cv2.imwrite(f"{GLOBAL_TOTALMASK_DIR}/{file_name}.png", cat_images)
 
 
 

@@ -24,7 +24,8 @@ datagen = ImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
-    # rescale=1. / 255,
+    brightness_range=None,
+    rescale=1.0 /255,
     shear_range=0.2,
     zoom_range=0.2,
     horizontal_flip=True,
@@ -35,69 +36,23 @@ datagen = ImageDataGenerator(
 # raw_images_path = os.path.join('./dataset/train/raw/')
 # mask_images_path = os.path.join('./dataset/train/graymasks_normalized/')
 raw_images_path = './dataset/train/raw'
-mask_images_path = './dataset/train/graymasks_normalized'
+mask_images_path = './dataset/train/masks'
 print(sorted(glob(os.path.join(raw_images_path, '*.png'))))
-#
-# raw_datagen = datagen.flow_from_directory(
-#     raw_images_path,
-#     target_size=(480, 640),
-#     batch_size=4,
-#     class_mode=None,
-#     classes=None,
-#     seed=42,
-#     # save_format='png',
-#     # save_to_dir='./dataset/train/raw_augmented'
-# )
-# mask_datagen = datagen.flow_from_directory(
-#     mask_images_path,
-#     target_size=(480, 640),
-#     batch_size=4,
-#     class_mode=None,
-#     classes=None,
-#     seed=42,
-#     # save_format='png',
-#     # save_to_dir='./dataset/train/graymasks_normalized_augmented'
-# )
-
-# print(len(raw_datagen))
-# print(len(mask_datagen))
-
 
 # raw 이미지와 mask 이미지 불러오기
 raw_images = sorted(glob(os.path.join(raw_images_path, '*.png')))
 mask_images = sorted(glob(os.path.join(mask_images_path, '*.png')))
 
-# 이미지 데이터 묶기
-raw_datagen = datagen.flow(
-    np.array([cv2.cvtColor(cv2.imread(img, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB) for img in raw_images]),
-    batch_size=32,
-    seed=42,
-    shuffle=False,
-    save_format='png',
-    save_prefix='aug_',
-    save_to_dir='./dataset/train/raw_augmented/'
-)
-mask_datagen = datagen.flow(
-    np.array([cv2.cvtColor(cv2.imread(img, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB) for img in mask_images]),
-    batch_size=32,
-    seed=42,
-    shuffle=False,
-    save_format='png',
-    save_prefix='aug_',
-    save_to_dir='./dataset/train/graymasks_normalized_augmented/'
-)
+r = np.array([cv2.cvtColor(cv2.imread(img, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB) for img in raw_images])
+print(r.shape)
+print(np.max(r))
+print(np.unique(r))
 
-# raw_count = 0
-# for i, x in tqdm(enumerate(raw_datagen), total=len(raw_datagen)):
-#     raw_count += 1
-#     if raw_count == 10:
-#         break
-#
-# mask_count = 0
-# for j, y in tqdm(enumerate(mask_datagen), total=len(mask_datagen)):
-#     mask_count += 1
-#     if mask_count == 10:
-#         break
+f = np.array([cv2.cvtColor(cv2.imread(img, cv2.IMREAD_GRAYSCALE), cv2.COLOR_BGR2RGB) for img in mask_images])
+print(f.shape)
+print(np.max(f))
+print(np.unique(f))
+
 
 raw_count = 0
 for batch in tqdm(datagen.flow(
@@ -122,18 +77,9 @@ for batch in tqdm(datagen.flow(
                         shuffle=False,
                         save_format='png',
                         save_prefix='aug_',
-                        save_to_dir='./dataset/train/graymasks_normalized_augmented/'
+                        save_to_dir='./dataset/train/masks_augmented/'
                         ), total=len(mask_images)):
     mask_count += 1
     if mask_count == 10:
         break
 
-# for i, x in tqdm(enumerate(raw_datagen), total=len(raw_datagen)):
-#     for j in range(len(x)):
-#         img_raw = Image.fromarray((x[j]*255).astype('uint8'))
-#         img_raw_path =
-
-
-# raw_datagen과 mask_datagen의 길이 확인
-print(len(raw_datagen))  # raw 이미지의 개수
-print(len(mask_datagen))  # mask 이미지의 개수
