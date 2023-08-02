@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     """ Load the model """
     model = tf.keras.models.load_model(model_path)
-    # model.summary()
+    model.summary()
 
 
     """ Prediction & Evaluation """

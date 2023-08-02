@@ -1,0 +1,5 @@
+Class,F1-score,Jaccard
+background     ,0.99349,0.98714
+manipulator    ,0.71666,0.58952
+shaft          ,0.75722,0.70415
+Mean           ,0.82245,0.76027
