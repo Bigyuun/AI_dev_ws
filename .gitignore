@@ -6,3 +6,4 @@ src/UNet/UNet/files/
 src/UNet/UNet_Augmentation/files
 model.h5
 file/
+venv/
