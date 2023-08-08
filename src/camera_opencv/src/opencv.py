@@ -1,39 +1,49 @@
-import cv2
 import pyrealsense2 as rs
 import numpy as np
+import cv2
 
-def main():
-    # 카메라 객체 생성
-    pipeline = rs.pipeline()
-    config = rs.config()
-    config.enable_stream(rs.stream.color, 640, 480, rs.format.rgb8, 30)
+pipe = rs.pipeline()
+cfg = rs.config()
 
-    # 카메라 시작
-    pipeline.start(config)
+# D405 has revolutions of 720p on RGB and 640p on depth
+cfg.enable_stream(rs.stream.color, 640,480, rs.format.bgr8, 30)
+cfg.enable_stream(rs.stream.depth, 640,480, rs.format.z16, 30)
 
-    try:
-        while True:
-            # 카메라로부터 프레임 가져오기
-            frames = pipeline.wait_for_frames()
-            color_frame = frames.get_color_frame()
+# Start steaming
+profile = pipe.start(cfg)
 
-            if not color_frame:
-                continue
+# Getting the depth sensor's depth scale (see rs-align example for explanation)
+depth_sensor = profile.get_device().first_depth_sensor()
+depth_scale = depth_sensor.get_depth_scale()
+print("Depth Scael : {}".format(depth_scale))
 
-            # 프레임 데이터를 NumPy 배열로 변환
-            color_image = np.asanyarray(color_frame.get_data())
 
-            # 화면에 영상 보여주기
-            cv2.imshow('Realsense Camera', color_image)
 
-            # 'q' 키를 누르면 종료
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+frame_loss = 0
+while True:
 
-    finally:
-        # 카메라 정리 및 창 닫기
-        pipeline.stop()
-        cv2.destroyAllWindows()
+    # wait for a coherent pair of frames : depth and color
+    frame = pipe.wait_for_frames()
+    depth_frame = frame.get_depth_frame()
+    color_frame = frame.get_color_frame()
+    if not depth_frame or not color_frame:
+        frame_loss = frame_loss + 1
+        print("frame loss : {}".format(frame_loss))
+        continue
 
-if __name__ == "__main__":
-    main()
+
+    depth_image = np.asanyarray(depth_frame.get_data())
+    color_image = np.asanyarray(color_frame.get_data())
+    depth_cm = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha = 0.5),
+                                 cv2.COLORMAP_JET)
+
+    gray_image = cv2.cvtColor(color_image,
+                              cv2.COLOR_BGR2GRAY)
+
+    cv2.imshow('rgb', color_image)
+    cv2.imshow('depth', depth_cm)
+
+    if cv2.waitKey(1) == ord('q'):
+        break
+
+pipe.stop()

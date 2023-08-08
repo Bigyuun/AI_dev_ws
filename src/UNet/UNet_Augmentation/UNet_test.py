@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
 
         """ Prediction """
+        pred = model.predict(image)
         pred = model.predict(image, verbose=0)[0]
         pred = np.argmax(pred, axis=-1) ## [0.1, 0.2, 0.1, 0.6] -> 3
         pred = pred.astype(np.int32)
