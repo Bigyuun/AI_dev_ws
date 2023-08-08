@@ -33,6 +33,7 @@ while True:
 
 
     depth_image = np.asanyarray(depth_frame.get_data())
+    print(depth_image.shape)
     color_image = np.asanyarray(color_frame.get_data())
     depth_cm = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha = 0.5),
                                  cv2.COLORMAP_JET)

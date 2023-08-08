@@ -73,21 +73,40 @@ while True:
     pred = model.predict(color_input)[0]    # [0] means : [1, w, h, rgb] -> [w,h,rgb]
     pred = np.argmax(pred, axis=-1)
     pred = pred.astype(np.int32)
-    pred = pred*255./2
+    print(pred.shape)
+    temp_pred = pred
+    temp_pred = np.dstack((temp_pred,)*3).astype(np.uint8)
+
+    print(pred.shape[0], pred.shape[1])
+    print(temp_pred[0,0])
+    print(temp_pred[0,0,:])
+    for r in range(pred.shape[0]):
+        for c in range(pred.shape[1]):
+            if np.array_equal(temp_pred[r,c,:], [1,1,1]):
+                temp_pred[r,c,:] = [0,255,0]
+            if np.array_equal(temp_pred[r,c,:], [2,2,2]):
+                temp_pred[r,c,:] = [0,0,255]
+
+
+    # pred = pred*255./2
+
+
 
     # np_horizontal = np.hstack((color_image, np.resize(pred,(480,640,3))))
-    pred_rgb = np.dstack((pred,)*3).astype(np.int8)
+    pred_rgb = np.dstack((pred,)*3).astype(np.uint8)
+    pred_rgb[:, :, 1:3] = 0
+
     input_pred_image = np.concatenate((color_image, pred_rgb), axis=1)
 
     end_time = time.time()
     fr = 1 / (end_time - start_time)
     fr_str = f'FPS = {fr:.2f}'
-    cv2.putText(pred_rgb,
+    cv2.putText(color_image,
                 fr_str,
                 (10,30),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
-                (255, 0, 255),
+                (255, 0, 0),
                 2)
     cv2.imshow('prediction', pred_rgb)
     # cv2.imshow('UNet', input_pred_image)
